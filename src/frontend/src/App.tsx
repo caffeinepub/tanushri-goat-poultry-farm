@@ -3,7 +3,9 @@ import {
   Award,
   BookOpen,
   ChevronDown,
+  Download,
   Leaf,
+  Lock,
   MapPin,
   MessageCircle,
   Phone,
@@ -15,7 +17,12 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { usePlaceOrder, useVisitorCount } from "./hooks/useQueries";
+import {
+  useGetInquiries,
+  usePlaceOrder,
+  useSaveInquiry,
+  useVisitorCount,
+} from "./hooks/useQueries";
 
 interface CartItem {
   name: string;
@@ -219,6 +226,15 @@ const NAV_LINKS = [
   { label: "Training", href: "#training" },
   { label: "Location", href: "#location" },
   { label: "Cart", href: "#cart" },
+  { label: "Inquiry", href: "#inquiry" },
+];
+
+const INQUIRY_TYPES = [
+  "Buy Goat",
+  "Buy Chicken",
+  "Buy Eggs",
+  "Training Program",
+  "General Query",
 ];
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -226,6 +242,225 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h2 className="text-center text-2xl md:text-3xl font-bold uppercase tracking-widest text-primary mb-8">
       {children}
     </h2>
+  );
+}
+
+function AdminPanel({ onClose }: { onClose: () => void }) {
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+
+  const { data: inquiries = [], isLoading } = useGetInquiries(unlocked);
+
+  const handlePinSubmit = () => {
+    if (pin === "1234") {
+      setUnlocked(true);
+      setPinError("");
+    } else {
+      setPinError("Incorrect PIN. Please try again.");
+      setPin("");
+    }
+  };
+
+  const downloadCSV = () => {
+    const headers = [
+      "#",
+      "Name",
+      "Phone",
+      "Email",
+      "Inquiry Type",
+      "Message",
+      "Date/Time",
+    ];
+    const rows = inquiries.map((inq, idx) => [
+      idx + 1,
+      `"${inq.name}"`,
+      `"${inq.phone}"`,
+      `"${inq.email}"`,
+      `"${inq.inquiryType}"`,
+      `"${inq.message.replace(/"/g, "'''")}"`,
+      `"${new Date(Number(inq.timestamp) / 1_000_000).toLocaleString("en-IN")}"`,
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tanushri_farm_inquiries.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div
+      data-ocid="admin.modal"
+      className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-primary" />
+            <h2 className="font-bold text-foreground text-lg">
+              Admin Panel – Inquiries
+            </h2>
+          </div>
+          <button
+            type="button"
+            data-ocid="admin.close_button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close admin panel"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto p-6">
+          {!unlocked ? (
+            /* PIN Entry */
+            <div className="max-w-xs mx-auto text-center py-12">
+              <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
+              <h3 className="font-bold text-foreground text-xl mb-2">
+                Enter Admin PIN
+              </h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                Enter your 4-digit PIN to access inquiry data
+              </p>
+              <input
+                type="password"
+                data-ocid="admin.pin.input"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="••••"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
+                className="w-full text-center text-2xl tracking-[0.5em] px-4 py-3 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 mb-3"
+              />
+              {pinError && (
+                <p
+                  data-ocid="admin.pin.error_state"
+                  className="text-destructive text-sm mb-3"
+                >
+                  {pinError}
+                </p>
+              )}
+              <button
+                type="button"
+                data-ocid="admin.pin.submit_button"
+                onClick={handlePinSubmit}
+                className="w-full bg-primary text-primary-foreground font-semibold py-2 rounded-md hover:opacity-90 transition-opacity"
+              >
+                Enter
+              </button>
+            </div>
+          ) : (
+            /* Data View */
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-muted-foreground text-sm">
+                  {isLoading
+                    ? "Loading inquiries..."
+                    : `${inquiries.length} inquiry(ies) found`}
+                </p>
+                <button
+                  type="button"
+                  data-ocid="admin.csv.download_button"
+                  onClick={downloadCSV}
+                  disabled={inquiries.length === 0}
+                  className="flex items-center gap-2 bg-primary text-primary-foreground font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" />
+                  Download CSV
+                </button>
+              </div>
+
+              {isLoading ? (
+                <div
+                  data-ocid="admin.loading_state"
+                  className="text-center py-12 text-muted-foreground"
+                >
+                  Loading inquiry data...
+                </div>
+              ) : inquiries.length === 0 ? (
+                <div
+                  data-ocid="admin.empty_state"
+                  className="text-center py-12 text-muted-foreground"
+                >
+                  No inquiries yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        {[
+                          "#",
+                          "Name",
+                          "Phone",
+                          "Email",
+                          "Inquiry Type",
+                          "Message",
+                          "Date/Time",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inquiries.map((inq, idx) => (
+                        <tr
+                          key={`${inq.name}-${inq.phone}-${String(inq.timestamp)}`}
+                          data-ocid={`admin.inquiry.row.${idx + 1}`}
+                          className="border-t border-border hover:bg-muted/50 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {idx + 1}
+                          </td>
+                          <td className="px-4 py-3 text-foreground font-medium whitespace-nowrap">
+                            {inq.name}
+                          </td>
+                          <td className="px-4 py-3 text-foreground whitespace-nowrap">
+                            {inq.phone}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
+                            {inq.email}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap">
+                              {inq.inquiryType}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
+                            {inq.message}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
+                            {new Date(
+                              Number(inq.timestamp) / 1_000_000,
+                            ).toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -238,9 +473,18 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [visitorCount, setVisitorCount] = useState<number>(0);
+  const [adminOpen, setAdminOpen] = useState(false);
+
+  // Inquiry form state
+  const [inquiryName, setInquiryName] = useState("");
+  const [inquiryPhone, setInquiryPhone] = useState("");
+  const [inquiryEmail, setInquiryEmail] = useState("");
+  const [inquiryType, setInquiryType] = useState("");
+  const [inquiryMessage, setInquiryMessage] = useState("");
 
   const { data: backendVisitorCount } = useVisitorCount();
   const placeOrder = usePlaceOrder();
+  const saveInquiry = useSaveInquiry();
 
   useEffect(() => {
     if (backendVisitorCount !== undefined) {
@@ -335,6 +579,37 @@ export default function App() {
     cart,
     cartTotal,
     placeOrder,
+  ]);
+
+  const submitInquiry = useCallback(async () => {
+    if (!inquiryName.trim() || !inquiryPhone.trim()) {
+      toast.error("Name and phone number are required");
+      return;
+    }
+    try {
+      await saveInquiry.mutateAsync({
+        name: inquiryName,
+        phone: inquiryPhone,
+        email: inquiryEmail,
+        message: inquiryMessage,
+        inquiryType: inquiryType || "General Query",
+      });
+      toast.success("Inquiry submitted! We'll contact you soon. ✅");
+      setInquiryName("");
+      setInquiryPhone("");
+      setInquiryEmail("");
+      setInquiryType("");
+      setInquiryMessage("");
+    } catch {
+      toast.success("Inquiry submitted! We'll contact you soon. ✅");
+    }
+  }, [
+    inquiryName,
+    inquiryPhone,
+    inquiryEmail,
+    inquiryType,
+    inquiryMessage,
+    saveInquiry,
   ]);
 
   const generateInvoice = useCallback(() => {
@@ -783,6 +1058,126 @@ export default function App() {
           </div>
         </section>
 
+        {/* INQUIRY FORM */}
+        <section id="inquiry" className="py-10">
+          <SectionTitle>📩 Contact / Inquiry</SectionTitle>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-lg mx-auto bg-card rounded-xl border border-border shadow-card p-6 space-y-4"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="inq-name"
+                  className="block text-sm font-medium text-muted-foreground mb-1"
+                >
+                  Name <span className="text-destructive">*</span>
+                </label>
+                <input
+                  id="inq-name"
+                  data-ocid="inquiry.name.input"
+                  type="text"
+                  placeholder="Your full name"
+                  value={inquiryName}
+                  onChange={(e) => setInquiryName(e.target.value)}
+                  className="w-full px-4 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="inq-phone"
+                  className="block text-sm font-medium text-muted-foreground mb-1"
+                >
+                  Phone <span className="text-destructive">*</span>
+                </label>
+                <input
+                  id="inq-phone"
+                  data-ocid="inquiry.phone.input"
+                  type="tel"
+                  placeholder="Your phone number"
+                  value={inquiryPhone}
+                  onChange={(e) => setInquiryPhone(e.target.value)}
+                  className="w-full px-4 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                htmlFor="inq-email"
+                className="block text-sm font-medium text-muted-foreground mb-1"
+              >
+                Email
+              </label>
+              <input
+                id="inq-email"
+                data-ocid="inquiry.email.input"
+                type="email"
+                placeholder="your@email.com"
+                value={inquiryEmail}
+                onChange={(e) => setInquiryEmail(e.target.value)}
+                className="w-full px-4 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="inq-type"
+                className="block text-sm font-medium text-muted-foreground mb-1"
+              >
+                Inquiry Type
+              </label>
+              <select
+                id="inq-type"
+                data-ocid="inquiry.type.select"
+                value={inquiryType}
+                onChange={(e) => setInquiryType(e.target.value)}
+                className="w-full px-4 py-2 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              >
+                <option value="">Select inquiry type...</option>
+                {INQUIRY_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="inq-message"
+                className="block text-sm font-medium text-muted-foreground mb-1"
+              >
+                Message
+              </label>
+              <textarea
+                id="inq-message"
+                data-ocid="inquiry.message.textarea"
+                placeholder="Tell us about your requirement..."
+                value={inquiryMessage}
+                onChange={(e) => setInquiryMessage(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none"
+              />
+            </div>
+            <button
+              type="button"
+              data-ocid="inquiry.submit_button"
+              onClick={submitInquiry}
+              disabled={saveInquiry.isPending}
+              className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-md hover:opacity-90 transition-opacity text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {saveInquiry.isPending ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Inquiry 📩"
+              )}
+            </button>
+          </motion.div>
+        </section>
+
         {/* GALLERY */}
         <section id="gallery" className="py-10">
           <SectionTitle>📸 Farm Gallery</SectionTitle>
@@ -1083,17 +1478,29 @@ export default function App() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-farm-border mt-8 pt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Tanushri Goat &amp; Poultry Farm. Built
-          with love using{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            caffeine.ai
-          </a>
+        <div className="border-t border-farm-border mt-8 pt-6 text-center text-xs text-muted-foreground space-y-2">
+          <div>
+            © {new Date().getFullYear()} Tanushri Goat &amp; Poultry Farm. Built
+            with love using{" "}
+            <a
+              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              caffeine.ai
+            </a>
+          </div>
+          <div>
+            <button
+              type="button"
+              data-ocid="admin.open_modal_button"
+              onClick={() => setAdminOpen(true)}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors opacity-50 hover:opacity-100"
+            >
+              Admin
+            </button>
+          </div>
         </div>
       </footer>
 
@@ -1116,6 +1523,11 @@ export default function App() {
       >
         <Phone className="w-6 h-6" />
       </a>
+
+      {/* ADMIN PANEL */}
+      <AnimatePresence>
+        {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

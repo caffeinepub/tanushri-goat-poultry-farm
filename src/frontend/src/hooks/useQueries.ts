@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ItemsOrdered } from "../backend";
+import type { Inquiry, ItemsOrdered } from "../backend.d";
 import { useActor } from "./useActor";
 
 export function useVisitorCount() {
@@ -38,5 +38,43 @@ export function usePlaceOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
+  });
+}
+
+export function useSaveInquiry() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      phone: string;
+      email: string;
+      message: string;
+      inquiryType: string;
+    }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.saveInquiry(
+        params.name,
+        params.phone,
+        params.email,
+        params.message,
+        params.inquiryType,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inquiries"] });
+    },
+  });
+}
+
+export function useGetInquiries(enabled: boolean) {
+  const { actor, isFetching } = useActor();
+  return useQuery<Inquiry[]>({
+    queryKey: ["inquiries"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getInquiries();
+    },
+    enabled: !!actor && !isFetching && enabled,
   });
 }

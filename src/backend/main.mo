@@ -22,9 +22,20 @@ actor {
     timestamp : Int;
   };
 
+  type Inquiry = {
+    name : Text;
+    phone : Text;
+    email : Text;
+    message : Text;
+    inquiryType : Text;
+    timestamp : Int;
+  };
+
   // State variables
   var visitorCount = 0;
   let orders = Map.empty<Int, Order>();
+  let inquiries = Map.empty<Int, Inquiry>();
+  var inquiryCounter = 0;
 
   // Create and store order
   public shared ({ caller }) func placeOrder(name : Text, address : Text, contact : Text, items : [ItemsOrdered], totalAmount : Float) : async () {
@@ -39,6 +50,30 @@ actor {
       timestamp;
     };
     orders.add(orderId, order);
+  };
+
+  // Save inquiry
+  public shared ({ caller }) func saveInquiry(name : Text, phone : Text, email : Text, message : Text, inquiryType : Text) : async () {
+    inquiryCounter += 1;
+    let inquiry : Inquiry = {
+      name;
+      phone;
+      email;
+      message;
+      inquiryType;
+      timestamp = Time.now();
+    };
+    inquiries.add(inquiryCounter, inquiry);
+  };
+
+  // Get all inquiries
+  public query ({ caller }) func getInquiries() : async [Inquiry] {
+    inquiries.values().toArray();
+  };
+
+  // Get inquiry count
+  public query ({ caller }) func getInquiryCount() : async Nat {
+    inquiryCounter;
   };
 
   // Increment and get visitor count

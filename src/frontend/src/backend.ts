@@ -102,12 +102,23 @@ export interface ItemsOrdered {
     quantity: bigint;
     price: number;
 }
+export interface Inquiry {
+    name: string;
+    phone: string;
+    email: string;
+    message: string;
+    inquiryType: string;
+    timestamp: bigint;
+}
 export interface backendInterface {
     getAllOrders(): Promise<Array<Order>>;
     getOrder(orderId: bigint): Promise<Order>;
     getVisitorCount(): Promise<bigint>;
     incrementVisitorCount(): Promise<void>;
     placeOrder(name: string, address: string, contact: string, items: Array<ItemsOrdered>, totalAmount: number): Promise<void>;
+    saveInquiry(name: string, phone: string, email: string, message: string, inquiryType: string): Promise<void>;
+    getInquiries(): Promise<Array<Inquiry>>;
+    getInquiryCount(): Promise<bigint>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
@@ -178,6 +189,48 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.placeOrder(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async saveInquiry(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveInquiry(arg0, arg1, arg2, arg3, arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveInquiry(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async getInquiries(): Promise<Array<Inquiry>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getInquiries();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getInquiries();
+            return result;
+        }
+    }
+    async getInquiryCount(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getInquiryCount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getInquiryCount();
             return result;
         }
     }

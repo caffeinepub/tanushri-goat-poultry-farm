@@ -21,6 +21,14 @@ export const Order = IDL.Record({
   'timestamp' : IDL.Int,
   'items' : IDL.Vec(ItemsOrdered),
 });
+export const Inquiry = IDL.Record({
+  'name' : IDL.Text,
+  'phone' : IDL.Text,
+  'email' : IDL.Text,
+  'message' : IDL.Text,
+  'inquiryType' : IDL.Text,
+  'timestamp' : IDL.Int,
+});
 
 export const idlService = IDL.Service({
   'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
@@ -32,6 +40,9 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'saveInquiry' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
+  'getInquiries' : IDL.Func([], [IDL.Vec(Inquiry)], ['query']),
+  'getInquiryCount' : IDL.Func([], [IDL.Nat], ['query']),
 });
 
 export const idlInitArgs = [];
@@ -50,6 +61,14 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : IDL.Int,
     'items' : IDL.Vec(ItemsOrdered),
   });
+  const Inquiry = IDL.Record({
+    'name' : IDL.Text,
+    'phone' : IDL.Text,
+    'email' : IDL.Text,
+    'message' : IDL.Text,
+    'inquiryType' : IDL.Text,
+    'timestamp' : IDL.Int,
+  });
   
   return IDL.Service({
     'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
@@ -61,6 +80,9 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'saveInquiry' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
+    'getInquiries' : IDL.Func([], [IDL.Vec(Inquiry)], ['query']),
+    'getInquiryCount' : IDL.Func([], [IDL.Nat], ['query']),
   });
 };
 

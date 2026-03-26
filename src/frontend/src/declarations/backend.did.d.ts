@@ -23,6 +23,14 @@ export interface Order {
   'timestamp' : bigint,
   'items' : Array<ItemsOrdered>,
 }
+export interface Inquiry {
+  'name' : string,
+  'phone' : string,
+  'email' : string,
+  'message' : string,
+  'inquiryType' : string,
+  'timestamp' : bigint,
+}
 export interface _SERVICE {
   'getAllOrders' : ActorMethod<[], Array<Order>>,
   'getOrder' : ActorMethod<[bigint], Order>,
@@ -32,6 +40,9 @@ export interface _SERVICE {
     [string, string, string, Array<ItemsOrdered>, number],
     undefined
   >,
+  'saveInquiry' : ActorMethod<[string, string, string, string, string], undefined>,
+  'getInquiries' : ActorMethod<[], Array<Inquiry>>,
+  'getInquiryCount' : ActorMethod<[], bigint>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

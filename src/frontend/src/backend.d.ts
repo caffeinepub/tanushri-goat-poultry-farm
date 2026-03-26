@@ -20,10 +20,21 @@ export interface ItemsOrdered {
     quantity: bigint;
     price: number;
 }
+export interface Inquiry {
+    name: string;
+    phone: string;
+    email: string;
+    message: string;
+    inquiryType: string;
+    timestamp: bigint;
+}
 export interface backendInterface {
     getAllOrders(): Promise<Array<Order>>;
     getOrder(orderId: bigint): Promise<Order>;
     getVisitorCount(): Promise<bigint>;
     incrementVisitorCount(): Promise<void>;
     placeOrder(name: string, address: string, contact: string, items: Array<ItemsOrdered>, totalAmount: number): Promise<void>;
+    saveInquiry(name: string, phone: string, email: string, message: string, inquiryType: string): Promise<void>;
+    getInquiries(): Promise<Array<Inquiry>>;
+    getInquiryCount(): Promise<bigint>;
 }
